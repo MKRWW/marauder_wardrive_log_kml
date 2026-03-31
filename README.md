@@ -12,7 +12,7 @@ Wardriving is the practice of moving through an area while scanning for Wi-Fi ne
 
 ## What does this project do?
 
-`wardrive2map.py` reads a Marauder wardrive log and produces a `.kml` or `.gpx` file with one placemark/waypoint per detected device. KML output is color-coded by signal strength. GPX output is compatible with Garmin devices (tested: eTrex 30HCx).
+`wardrive2map.py` reads a Marauder wardrive log and produces a `.kml` or `.gpx` file with one placemark/waypoint per detected device. KML output is color-coded by signal strength. GPX output is compatible with Garmin devices (tested: eTrex 30x).
 
 ### Color coding (KML)
 
