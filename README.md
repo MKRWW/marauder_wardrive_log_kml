@@ -1,4 +1,4 @@
-# CSV2KML Exporter
+#Marauder Log to KML Exporter
 
 Convert [ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder) wardrive logs to KML files for visualization in Google Earth, Google Maps, or any GIS tool.
 
