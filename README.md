@@ -1,6 +1,6 @@
-# Marauder Log to KML Exporter
+# Wardrive2Map
 
-Convert [ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder) wardrive logs to KML files for visualization in Google Earth, Google Maps, or any GIS tool.
+Convert [ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder) wardrive logs to **KML** (Google Earth / Maps) or **GPX** (Garmin eTrex and other GPS devices) files.
 
 ## What is Wardriving?
 
@@ -10,11 +10,11 @@ Wardriving is the practice of moving through an area while scanning for Wi-Fi ne
 
 [ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder) is an open-source firmware for ESP32-based devices (e.g. Flipper Zero Wi-Fi dev board, M5Stack) that turns them into portable wireless scanners. Among many features, it can perform wardrive sessions — scanning for nearby Wi-Fi access points and BLE devices while recording GPS coordinates — and saves the results as a CSV log file (`wardrive_X.log`).
 
-## What does this script do?
+## What does this project do?
 
 `wardrive2map.py` reads a Marauder wardrive log and produces a `.kml` or `.gpx` file with one placemark/waypoint per detected device. KML output is color-coded by signal strength. GPX output is compatible with Garmin devices (tested: eTrex 30HCx).
 
-### Color coding
+### Color coding (KML)
 
 | Color  | Signal strength (RSSI) | Meaning       |
 |--------|------------------------|---------------|
@@ -24,11 +24,27 @@ Wardriving is the practice of moving through an area while scanning for Wi-Fi ne
 | Red    | < −80 dBm              | Very weak     |
 | Blue   | —                      | BLE device    |
 
-Each placemark shows: SSID, MAC address, encryption type, channel, RSSI, first-seen timestamp, and GPS accuracy.
+Each placemark/waypoint shows: SSID, MAC address, encryption type, channel, RSSI, first-seen timestamp, and GPS accuracy.
 
-The output KML contains two folders:
+The KML output contains two folders:
 - **WiFi Networks** — all detected access points
 - **BLE Devices** — all detected Bluetooth Low Energy devices
+
+## Project structure
+
+```
+wardrive2map.py   # CLI entry point — argument parsing & filter logic
+kml_writer.py     # KML export library  (build_kml)
+gpx_writer.py     # GPX export library  (build_gpx)
+```
+
+`wardrive2map.py` is the **facade** — it handles all user interaction and delegates the actual export to the writer libraries.  
+`kml_writer.py` and `gpx_writer.py` are **standalone libraries** and can be imported independently in other scripts or notebooks:
+
+```python
+from kml_writer import build_kml
+from gpx_writer import build_gpx
+```
 
 ## Requirements
 
