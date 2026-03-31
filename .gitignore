@@ -1,6 +1,9 @@
 # Generated output
 *.kml
 
+# Wardrive log files (contain personal/location data)
+*.log
+
 # Python
 __pycache__/
 *.py[cod]
