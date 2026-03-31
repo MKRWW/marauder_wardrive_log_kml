@@ -12,7 +12,7 @@ Wardriving is the practice of moving through an area while scanning for Wi-Fi ne
 
 ## What does this script do?
 
-`csv2kml.py` reads a Marauder wardrive log and produces a `.kml` file with one placemark per detected device, color-coded by signal strength. Open the KML in Google Earth or import it into Google Maps to see exactly where every network was detected.
+`wardrive2map.py` reads a Marauder wardrive log and produces a `.kml` or `.gpx` file with one placemark/waypoint per detected device. KML output is color-coded by signal strength. GPX output is compatible with Garmin devices (tested: eTrex 30HCx).
 
 ### Color coding
 
@@ -39,24 +39,31 @@ The output KML contains two folders:
 
 ```bash
 # Auto-detect the first wardrive*.log in the script directory
-python csv2kml.py
+python wardrive2map.py
 
 # Explicit input file
-python csv2kml.py -i wardrive_0.log
+python wardrive2map.py -i wardrive_0.log
 
 # Explicit input and output
-python csv2kml.py -i wardrive_0.log -o mymap.kml
+python wardrive2map.py -i wardrive_0.log -o mymap.kml
+
+# GPX export (for Garmin eTrex and other GPS devices)
+python wardrive2map.py -i wardrive_0.log --format gpx
+python wardrive2map.py -i wardrive_0.log --format gpx -o waypoints.gpx
 
 # Only WiFi networks, no BLE
-python csv2kml.py -i wardrive_0.log --wifi-only
+python wardrive2map.py -i wardrive_0.log --wifi-only
 
 # Only networks with a specific auth mode (implies --wifi-only)
-python csv2kml.py -i wardrive_0.log --auth WEP
-python csv2kml.py -i wardrive_0.log --auth WPA2_PSK,WPA_WPA2_PSK
-python csv2kml.py -i wardrive_0.log --auth WPA3
+python wardrive2map.py -i wardrive_0.log --auth WEP
+python wardrive2map.py -i wardrive_0.log --auth WPA2_PSK,WPA_WPA2_PSK
+python wardrive2map.py -i wardrive_0.log --auth WPA3
+
+# Combine: WEP-only as GPX straight to the Garmin
+python wardrive2map.py -i wardrive_0.log --auth WEP --format gpx
 
 # Help
-python csv2kml.py -h
+python wardrive2map.py -h
 ```
 
 ### Filter options

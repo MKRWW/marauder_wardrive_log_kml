@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-csv2kml.py – Convert Marauder wardrive.log to KML or GPX
+wardrive2map.py – Convert Marauder wardrive.log to KML or GPX
 
 Usage:
-    python csv2kml.py -i wardrive_0.log
-    python csv2kml.py -i wardrive_0.log -o mymap.kml
-    python csv2kml.py -i wardrive_0.log --format gpx
-    python csv2kml.py -i wardrive_0.log --format gpx -o waypoints.gpx
-    python csv2kml.py -i wardrive_0.log --wifi-only --auth WEP --format gpx
+    python wardrive2map.py -i wardrive_0.log
+    python wardrive2map.py -i wardrive_0.log -o mymap.kml
+    python wardrive2map.py -i wardrive_0.log --format gpx
+    python wardrive2map.py -i wardrive_0.log --format gpx -o waypoints.gpx
+    python wardrive2map.py -i wardrive_0.log --wifi-only --auth WEP --format gpx
 
 If -i is omitted, the script looks for a wardrive*.log in its own directory.
 If -o is omitted, the output file is written next to the input with the
@@ -263,7 +263,7 @@ def build_kml(entries: list[dict], title_suffix: str = "") -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="csv2kml.py",
+        prog="wardrive2map.py",
         description="Convert a Marauder wardrive.log (CSV) to KML or GPX.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
