@@ -1,34 +1,37 @@
 #!/usr/bin/env python3
 """
-csv2kml.py – Convert Marauder wardrive.log to KML
+csv2kml.py – Convert Marauder wardrive.log to KML or GPX
 
 Usage:
     python csv2kml.py -i wardrive_0.log
     python csv2kml.py -i wardrive_0.log -o mymap.kml
-    python csv2kml.py -i wardrive_0.log --wifi-only
-    python csv2kml.py -i wardrive_0.log --wifi-only --auth WEP
-    python csv2kml.py -i wardrive_0.log --auth WPA2_PSK,WPA_WPA2_PSK
+    python csv2kml.py -i wardrive_0.log --format gpx
+    python csv2kml.py -i wardrive_0.log --format gpx -o waypoints.gpx
+    python csv2kml.py -i wardrive_0.log --wifi-only --auth WEP --format gpx
 
 If -i is omitted, the script looks for a wardrive*.log in its own directory.
-If -o is omitted, the KML is written next to the input file.
+If -o is omitted, the output file is written next to the input with the
+appropriate extension (.kml or .gpx).
 
+--format     : kml (default) or gpx
 --wifi-only  : exclude BLE devices from output
 --auth       : comma-separated list of AuthMode substrings to keep,
                e.g. WEP  or  WPA2_PSK,WPA3  (case-insensitive)
 
-Color coding (WiFi):
+Color coding (WiFi, KML only):
     Green  : RSSI >= -60 dBm  (strong)
     Yellow : RSSI >= -70 dBm  (good)
     Orange : RSSI >= -80 dBm  (weak)
     Red    : RSSI  < -80 dBm  (very weak)
 
-BLE devices are shown in blue.
+BLE devices are shown in blue (KML only).
+GPX output is compatible with Garmin devices (tested: eTrex 30HCx).
 """
 
 import argparse
 import csv
 import sys
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -59,6 +62,90 @@ def _style_id(rssi: int, entry_type: str) -> str:
     if rssi >= -80:
         return "wifi_weak"
     return "wifi_very_weak"
+
+
+# ---------------------------------------------------------------------------
+# GPX builder
+# ---------------------------------------------------------------------------
+
+_GPX_SYM = {"WIFI": "Waypoint", "BLE": "Dot"}
+
+
+def _wpt(entry: dict) -> list[str]:
+    ssid    = entry["SSID"].strip() or "(hidden)"
+    mac     = entry["MAC"].strip()
+    auth    = entry["AuthMode"].strip()
+    channel = entry["Channel"].strip()
+    etype   = entry["Type"].strip()
+    lat     = entry["CurrentLatitude"].strip()
+    lon     = entry["CurrentLongitude"].strip()
+    alt     = entry["AltitudeMeters"].strip()
+    seen    = entry["FirstSeen"].strip()
+
+    try:
+        rssi = int(entry["RSSI"].strip())
+    except ValueError:
+        rssi = -999
+
+    # Garmin name max 30 chars — keep it readable
+    if etype == "WIFI":
+        raw_name = ssid if ssid != "(hidden)" else mac
+    else:
+        raw_name = mac
+    name = escape(raw_name[:30])
+
+    desc = escape(f"{auth} | Ch:{channel} | {rssi}dBm | {mac} | {seen}")
+    sym  = _GPX_SYM.get(etype, "Waypoint")
+
+    lines = [
+        f'  <wpt lat="{lat}" lon="{lon}">',
+    ]
+    if alt:
+        lines.append(f'    <ele>{escape(alt)}</ele>')
+    lines += [
+        f'    <time>{seen.replace(" ", "T")}Z</time>',
+        f'    <name>{name}</name>',
+        f'    <desc>{desc}</desc>',
+        f'    <sym>{sym}</sym>',
+        f'  </wpt>',
+    ]
+    return lines
+
+
+def build_gpx(entries: list[dict], title_suffix: str = "") -> str:
+    valid = [
+        e for e in entries
+        if e.get("CurrentLatitude", "").strip() not in ("", "0", "0.0")
+        and e.get("CurrentLongitude", "").strip() not in ("", "0", "0.0")
+    ]
+    skipped = len(entries) - len(valid)
+    if skipped:
+        print(f"  Skipped {skipped} entries without valid GPS coordinates.")
+
+    doc_name = f"Wardrive {datetime.now():%Y-%m-%d}"
+    if title_suffix:
+        doc_name += f" [{title_suffix}]"
+
+    wifi_count = sum(1 for e in valid if e.get("Type", "").strip() == "WIFI")
+    ble_count  = sum(1 for e in valid if e.get("Type", "").strip() == "BLE")
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<gpx version="1.1" creator="csv2kml.py"',
+        '    xmlns="http://www.topografix.com/GPX/1/1"',
+        '    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
+        '    xsi:schemaLocation="http://www.topografix.com/GPX/1/1',
+        '    http://www.topografix.com/GPX/1/1/gpx.xsd">',
+        f'  <metadata>',
+        f'    <name>{escape(doc_name)}</name>',
+        f'    <desc>{escape(f"WiFi: {wifi_count} | BLE: {ble_count}")}</desc>',
+        f'    <time>{datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}</time>',
+        f'  </metadata>',
+    ]
+    for e in valid:
+        lines += _wpt(e)
+    lines.append('</gpx>')
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -177,10 +264,14 @@ def build_kml(entries: list[dict], title_suffix: str = "") -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="csv2kml.py",
-        description="Convert a Marauder wardrive.log (CSV) to a KML file.",
+        description="Convert a Marauder wardrive.log (CSV) to KML or GPX.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "Color coding (WiFi):\n"
+            "Output formats:\n"
+            "  kml  (default) Google Earth / Maps, color-coded by RSSI\n"
+            "  gpx            Garmin eTrex and other GPS devices\n"
+            "\n"
+            "Color coding (WiFi, KML only):\n"
             "  Green  : RSSI >= -60 dBm  (strong)\n"
             "  Yellow : RSSI >= -70 dBm  (good)\n"
             "  Orange : RSSI >= -80 dBm  (weak)\n"
@@ -202,7 +293,14 @@ def main() -> None:
     parser.add_argument(
         "-o", "--output",
         metavar="OUTPUT",
-        help="Output KML file. Defaults to <input>.kml next to the input file.",
+        help="Output file. Defaults to <input>.<ext> next to the input file.",
+    )
+    parser.add_argument(
+        "--format",
+        metavar="FORMAT",
+        choices=["kml", "gpx"],
+        default="kml",
+        help="Output format: kml (default) or gpx (for Garmin and other GPS devices).",
     )
     parser.add_argument(
         "--wifi-only",
@@ -236,7 +334,8 @@ def main() -> None:
         parser.error(f"File not found: {log_path}")
 
     # Resolve output path
-    out_path = Path(args.output) if args.output else log_path.with_suffix(".kml")
+    default_ext = f".{args.format}"
+    out_path = Path(args.output) if args.output else log_path.with_suffix(default_ext)
 
     # Parse
     with open(log_path, newline="", encoding="utf-8") as f:
@@ -270,13 +369,19 @@ def main() -> None:
 
     title_suffix = " | ".join(title_parts)
 
-    # Build and write KML
-    kml = build_kml(entries, title_suffix=title_suffix)
-    out_path.write_text(kml, encoding="utf-8")
+    # Build and write output
+    if args.format == "gpx":
+        output = build_gpx(entries, title_suffix=title_suffix)
+        fmt_label = "GPX"
+    else:
+        output = build_kml(entries, title_suffix=title_suffix)
+        fmt_label = "KML"
+
+    out_path.write_text(output, encoding="utf-8")
 
     wifi_count = sum(1 for e in entries if e.get("Type", "").strip() == "WIFI")
     ble_count  = sum(1 for e in entries if e.get("Type", "").strip() == "BLE")
-    print(f"KML written to '{out_path}'")
+    print(f"{fmt_label} written to '{out_path}'")
     print(f"  WiFi: {wifi_count}  |  BLE: {ble_count}")
 
 
