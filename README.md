@@ -47,9 +47,26 @@ python csv2kml.py -i wardrive_0.log
 # Explicit input and output
 python csv2kml.py -i wardrive_0.log -o mymap.kml
 
+# Only WiFi networks, no BLE
+python csv2kml.py -i wardrive_0.log --wifi-only
+
+# Only networks with a specific auth mode (implies --wifi-only)
+python csv2kml.py -i wardrive_0.log --auth WEP
+python csv2kml.py -i wardrive_0.log --auth WPA2_PSK,WPA_WPA2_PSK
+python csv2kml.py -i wardrive_0.log --auth WPA3
+
 # Help
 python csv2kml.py -h
 ```
+
+### Filter options
+
+| Option | Description |
+|--------|-------------|
+| `--wifi-only` | Exclude BLE devices, only export WiFi networks |
+| `--auth MODE[,MODE,...]` | Keep only entries whose `AuthMode` contains one of the given substrings (case-insensitive). Implies `--wifi-only`. |
+
+The `--auth` filter matches substrings, so `WPA3` will match both `[WPA3_PSK]` and `[WPA2_WPA3_PSK]`.
 
 ## Input format
 
