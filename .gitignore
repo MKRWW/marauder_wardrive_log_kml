@@ -1,5 +1,6 @@
 # Generated output
 *.kml
+*.gpx
 
 # Wardrive log files (contain personal/location data)
 *.log
